@@ -13,11 +13,16 @@ struct coordinate{
 	int y;
 };
 typedef struct coordinate coordinate;
+double zoom = 1;
+double zoom_change = 5;
+double max_iterations = 250;
+double iteration_change = 20;
 
 int coordinate_to_index(coordinate c);
 coordinate index_to_coordinate(int index);
 double convert_ranges(double oldValue, double oldMin, double oldMax, double newMin, double newMax);
-int in_mandelbrot(double x, double y);
+int get_mandelbrot_iterations(double x, double y);
+void render_fractal(SDL_Texture *texture, double min_x, double max_x, double min_y, double max_y);
 
 int main(int argc, char **argv) {
     // SDL init
@@ -60,31 +65,13 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // array of pixels
-    uint8_t pixels[WIN_WIDTH * WIN_HEIGHT * 4] = {0};
+	//complex plane viewport
+	double min_c_x = -2.5;
+	double max_c_x = 1.5;
+	double min_c_y = -2;
+	double max_c_y = 2;
+	render_fractal(texture, min_c_x, max_c_x, min_c_y, max_c_y);
 
-    for (int i=0; i<WIN_HEIGHT*WIN_WIDTH*4; i+=4) {
-		coordinate c = index_to_coordinate(i);
-		double x_new = convert_ranges(c.x, 0, WIN_WIDTH, -2.5, 1.5);
-		double y_new = convert_ranges(c.y, 0, WIN_HEIGHT, -2, 2);
-		if(!in_mandelbrot(x_new, y_new)){
-			pixels[i] = 255;
-			pixels[i+1] = 255;
-			pixels[i+2] = 255;
-			pixels[i+3] = 255;
-		}
-    }
-
-    // update texture with new data
-    int texture_pitch = 0;
-    void* texture_pixels = NULL;
-    if (SDL_LockTexture(texture, NULL, &texture_pixels, &texture_pitch) != 0) {
-        SDL_Log("Unable to lock texture: %s", SDL_GetError());
-    }
-    else {
-        memcpy(texture_pixels, pixels, texture_pitch * WIN_HEIGHT);
-    }
-    SDL_UnlockTexture(texture);
 
     // main loop
     bool should_quit = false;
@@ -94,6 +81,19 @@ int main(int argc, char **argv) {
             if (e.type == SDL_QUIT) {
                 should_quit = true;
             }
+			else if ( e.type == SDL_MOUSEBUTTONDOWN) {
+				/* printf("Mouse moved to (%d,%d)\n", e.button.x, e.button.y); */
+				double x = convert_ranges(e.button.x, 0, WIN_WIDTH, min_c_x, max_c_x);
+				double y = convert_ranges(e.button.y, 0, WIN_HEIGHT, min_c_y, max_c_y);
+
+				min_c_x = x-zoom;
+				min_c_y = y-zoom;
+				max_c_x = x+zoom;
+				max_c_y = y+zoom;
+				render_fractal(texture, min_c_x, max_c_x, min_c_y, max_c_y);
+				zoom/=zoom_change;
+				max_iterations += iteration_change;
+			}
         }
 
         // render on screen
@@ -123,29 +123,47 @@ coordinate index_to_coordinate(int index) {
 
 double convert_ranges(double oldValue, double oldMin, double oldMax, double newMin, double newMax) {
 	return (((oldValue - oldMin) * (newMax - newMin)) / (oldMax - oldMin)) + newMin;
-
-  /* double oldRange = (oldMax - oldMin); */
-  /* double newValue; */
-  /* if (oldRange == 0) */
-  /*     newValue = newMin; */
-  /* else */
-  /* { */
-  /*     double newRange = (newMax - newMin); */
-  /*     newValue = (((oldValue - oldMin) * newRange) / oldRange) + newMin; */
-  /* } */
-  /* return newValue; */
 }
 
-int in_mandelbrot(double x, double y) {
+int get_mandelbrot_iterations(double x, double y) {
 	double complex z = 0;
 	double complex c = x+y*I;
 
 
-	for(int i=0; i < MAX_ITERATIONS; i++){
+	for(int i=0; i < max_iterations; i++){
 		z =z*z+c;
 		if(cabs(z) >= 2){
-			return 0;
+			return i;
 		}
 	}
-	return 1;
+	return max_iterations; // in set (black)
 }
+void render_fractal(SDL_Texture *texture, double min_x, double max_x, double min_y, double max_y){
+    // array of pixel
+    uint8_t pixels[WIN_WIDTH * WIN_HEIGHT * 4] = {0};
+
+    for (int i=0; i<WIN_HEIGHT*WIN_WIDTH*4; i+=4) {
+		coordinate c = index_to_coordinate(i);
+		double x_new = convert_ranges(c.x, 0, WIN_WIDTH, min_x, max_x);
+		double y_new = convert_ranges(c.y, 0, WIN_HEIGHT, min_y, max_y);
+		int num_iter = get_mandelbrot_iterations(x_new, y_new);
+		if(num_iter < max_iterations){
+			pixels[i] = num_iter; //R
+			pixels[i+1] = num_iter; //G
+			pixels[i+2] = num_iter; //B
+			pixels[i+3] = 255; //alpha
+		}
+    }
+
+    // update texture with new data
+    int texture_pitch = 0;
+    void* texture_pixels = NULL;
+    if (SDL_LockTexture(texture, NULL, &texture_pixels, &texture_pitch) != 0) {
+        SDL_Log("Unable to lock texture: %s", SDL_GetError());
+    }
+    else {
+        memcpy(texture_pixels, pixels, texture_pitch * WIN_HEIGHT);
+    }
+    SDL_UnlockTexture(texture);
+}
+
