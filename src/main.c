@@ -91,8 +91,14 @@ int main(int argc, char **argv) {
 				max_c_x = x+zoom;
 				max_c_y = y+zoom;
 				render_fractal(texture, min_c_x, max_c_x, min_c_y, max_c_y);
-				zoom/=zoom_change;
-				max_iterations += iteration_change;
+				if ( e.button.button == SDL_BUTTON_LEFT) {
+					zoom/=zoom_change;
+					max_iterations += iteration_change;
+				}
+				else if ( e.button.button == SDL_BUTTON_RIGHT) {
+					zoom*=zoom_change;
+					max_iterations -= iteration_change;
+				}
 			}
         }
 
@@ -111,13 +117,13 @@ int main(int argc, char **argv) {
 }
 
 int coordinate_to_index(coordinate c){
-	return 4*(c.y*WIN_HEIGHT + c.x);
+	return (c.y*WIN_HEIGHT + c.x);
 }
 
 coordinate index_to_coordinate(int index) {
 	coordinate c;
-	c.x = (index/4)%WIN_WIDTH;
-	c.y = (index/4)/WIN_HEIGHT;
+	c.x = (index)%WIN_WIDTH;
+	c.y = (index)/WIN_HEIGHT;
 	return c;
 }
 
@@ -140,18 +146,18 @@ int get_mandelbrot_iterations(double x, double y) {
 }
 void render_fractal(SDL_Texture *texture, double min_x, double max_x, double min_y, double max_y){
     // array of pixel
-    uint8_t pixels[WIN_WIDTH * WIN_HEIGHT * 4] = {0};
+    uint32_t pixels[WIN_WIDTH * WIN_HEIGHT] = {0};
 
-    for (int i=0; i<WIN_HEIGHT*WIN_WIDTH*4; i+=4) {
+    for (int i=0; i<WIN_HEIGHT*WIN_WIDTH; i++) {
 		coordinate c = index_to_coordinate(i);
 		double x_new = convert_ranges(c.x, 0, WIN_WIDTH, min_x, max_x);
 		double y_new = convert_ranges(c.y, 0, WIN_HEIGHT, min_y, max_y);
 		int num_iter = get_mandelbrot_iterations(x_new, y_new);
 		if(num_iter < max_iterations){
-			pixels[i] = num_iter; //R
-			pixels[i+1] = num_iter; //G
-			pixels[i+2] = num_iter; //B
-			pixels[i+3] = 255; //alpha
+			num_iter = (uint8_t)convert_ranges(num_iter, 0, max_iterations, 0, 255);
+			/* pixels[i] = (ALPHA << 24) | (BLUE << 16) | (GREEN << 8) | (RED << 0); */
+			/* pixels[i] = (255 << 24) | (num_iter << 16) | (num_iter << 8) | (num_iter << 0); */
+			pixels[i] = (255 << 24) | (0 << 16) | (num_iter << 8) | (0 << 0);
 		}
     }
 
