@@ -31,28 +31,20 @@ mandelbrot_escape_data get_mandelbrot_iterations(double x, double y,
   mandelbrot_escape_data data = {.iterations = max_iterations,
                                  .distance = cabs(z)};
   return data; // in set (black)
-
-  /* double a, b; */
-  /* int i; */
-  /* for(i=0; (i < max_iterations) && (a*a+b*b <= 4); i++){ */
-  /* 	double tmp = a*a-b*b + x; */
-  /* 	b = 2*a*b + y; */
-  /* 	a = tmp; */
-  /* } */
-  /* return i; */
 }
-RGB_Color hsv_to_rgb(float H, float S, float V) {
+
+RGB_Color hsv_to_rgb(double H, double S, double V) {
   float r, g, b;
 
-  float h = H / 360;
-  float s = S / 100;
-  float v = V / 100;
+  double h = H / 360.0;
+  double s = S / 100.0;
+  double v = V / 100.0;
 
   int i = floor(h * 6);
-  float f = h * 6 - i;
-  float p = v * (1 - s);
-  float q = v * (1 - f * s);
-  float t = v * (1 - (1 - f) * s);
+  double f = h * 6 - i;
+  double p = v * (1 - s);
+  double q = v * (1 - f * s);
+  double t = v * (1 - (1 - f) * s);
 
   switch (i % 6) {
   case 0:
@@ -81,4 +73,17 @@ RGB_Color hsv_to_rgb(float H, float S, float V) {
   c.B = (uint32_t)b * 255;
 
   return c;
+}
+
+double *linspace(double x1, double x2, int n) {
+
+  double *x = calloc(n, sizeof(double));
+
+  double step = (x2 - x1) / (double)(n - 1);
+
+  for (int i = 0; i < n; i++) {
+    x[i] = x1 + ((double)i * step);
+  }
+
+  return x;
 }

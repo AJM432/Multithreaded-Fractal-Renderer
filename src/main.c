@@ -1,7 +1,6 @@
 #include "compute_helper.h"
 #include "queue.h"
 #include <SDL.h>
-#include <math.h>
 #include <pthread.h>
 #include <stdio.h>
 
@@ -10,7 +9,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 double zoom = 1;
 double zoom_change = 3;
 double max_iterations = MAX_ITERATIONS;
-double iteration_change = 20;
+double iteration_change = 0;
 
 // array of pixel data
 uint32_t pixels[WIN_WIDTH * WIN_HEIGHT] = {0};
@@ -18,14 +17,24 @@ uint32_t pixels[WIN_WIDTH * WIN_HEIGHT] = {0};
 node_t *g_worker_queue = NULL;
 
 // complex plane viewport
-double min_c_x = -2.5;
-double max_c_x = 1.5;
+double min_c_x = -2;
+double max_c_x = 2;
 double min_c_y = -2;
 double max_c_y = 2;
 
 // function definitions
 void render_fractal(SDL_Texture *texture);
 void *thread_worker(void *);
+
+RGB_Color get_smooth_color(int iterations, double escape_radius,
+                           double max_iterations) {
+  double mu = iterations - log(log(escape_radius)) / log(2.0);
+  double normalized = mu / max_iterations;
+  double hue = 360.0 * normalized;
+
+  // Convert HSV to RGB
+  return hsv_to_rgb(hue, 100.0, 100.0);
+}
 
 int main(int argc, char **argv) {
   // SDL init
@@ -173,25 +182,25 @@ void *thread_worker(void *ptr) {
     if (line_task == -1) { // no more items in the queue
       break;
     }
+
+    double y_new = convert_ranges(index_to_coordinate(line_task * WIN_WIDTH).y,
+                                  0, WIN_HEIGHT, min_c_y, max_c_y);
+    double *x_new_array = linspace(min_c_x, max_c_x, WIN_WIDTH);
     for (int i = 0; i < WIN_WIDTH; i++) {
       coordinate c = index_to_coordinate(line_task * WIN_WIDTH + i);
-      double x_new = convert_ranges(c.x, 0, WIN_WIDTH, min_c_x, max_c_x);
-      double y_new = convert_ranges(c.y, 0, WIN_HEIGHT, min_c_y, max_c_y);
       mandelbrot_escape_data data =
-          get_mandelbrot_iterations(x_new, y_new, max_iterations);
+          get_mandelbrot_iterations(x_new_array[i], y_new, max_iterations);
       if (data.iterations < max_iterations) {
-        /* line[i] = (ALPHA << 24) | (BLUE << 16) | (GREEN << 8) | (RED << 0);
-         */
-        double smooth_map =
-            (double)data.iterations + 1.0 - log(log(data.distance)) / log(2);
-        double hue = (double)(smooth_map) / (double)max_iterations;
-        RGB_Color color = hsv_to_rgb(360.0 * hue, 100, 100.0);
+        // line[i] = (ALPHA << 24) | (BLUE << 16) | (GREEN << 8) | (RED << 0);
+        RGB_Color color =
+            get_smooth_color(data.iterations, data.distance, max_iterations);
         line[i] =
             (255 << 24) | (color.B << 16) | (color.G << 8) | (color.R << 0);
       } else {
         line[i] = 0;
       }
     }
+    free(x_new_array);
 
     pthread_mutex_lock(&mutex);
     memcpy(pixels + WIN_WIDTH * line_task, line, sizeof(uint32_t) * WIN_WIDTH);

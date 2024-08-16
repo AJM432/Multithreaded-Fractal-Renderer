@@ -29,4 +29,6 @@ double convert_ranges(double oldValue, double oldMin, double oldMax,
                       double newMin, double newMax);
 mandelbrot_escape_data get_mandelbrot_iterations(double x, double y,
                                                  int max_iterations);
-RGB_Color hsv_to_rgb(float H, float S, float V);
+RGB_Color hsv_to_rgb(double H, double S, double V);
+
+double *linspace(double x1, double x2, int n);
