@@ -1,4 +1,6 @@
 #include "queue.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 void enqueue(node_t **head, int val) {
   node_t *new_node = malloc(sizeof(node_t));

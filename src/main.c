@@ -1,11 +1,9 @@
 #include "compute_helper.h"
 #include "queue.h"
 #include <SDL.h>
+#include <math.h>
 #include <pthread.h>
 #include <stdio.h>
-
-#define KEY_PLUS 46;
-#define KEY_MINUS 45;
 
 // global variables
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -179,12 +177,17 @@ void *thread_worker(void *ptr) {
       coordinate c = index_to_coordinate(line_task * WIN_WIDTH + i);
       double x_new = convert_ranges(c.x, 0, WIN_WIDTH, min_c_x, max_c_x);
       double y_new = convert_ranges(c.y, 0, WIN_HEIGHT, min_c_y, max_c_y);
-      int num_iter = get_mandelbrot_iterations(x_new, y_new, max_iterations);
-      if (num_iter < max_iterations) {
-        num_iter = (uint8_t)convert_ranges(num_iter, 0, max_iterations, 0, 255);
+      mandelbrot_escape_data data =
+          get_mandelbrot_iterations(x_new, y_new, max_iterations);
+      if (data.iterations < max_iterations) {
         /* line[i] = (ALPHA << 24) | (BLUE << 16) | (GREEN << 8) | (RED << 0);
          */
-        line[i] = (255 << 24) | (0 << 16) | (num_iter << 8) | (0 << 0);
+        double smooth_map =
+            (double)data.iterations + 1.0 - log(log(data.distance)) / log(2);
+        double hue = (double)(smooth_map) / (double)max_iterations;
+        RGB_Color color = hsv_to_rgb(360.0 * hue, 100, 100.0);
+        line[i] =
+            (255 << 24) | (color.B << 16) | (color.G << 8) | (color.R << 0);
       } else {
         line[i] = 0;
       }
