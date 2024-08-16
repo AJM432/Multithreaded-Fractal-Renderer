@@ -3,5 +3,5 @@ LIB_DIRS = -L lib -l SDL2-2.0.0
 
 SRC = $(wildcard src/*.c)
 
-default:
+all:
 	gcc -g $(SRC) -o build/fractal $(INCLUDE_DIRS) $(LIB_DIRS)

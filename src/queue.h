@@ -2,8 +2,8 @@
 #include <stdlib.h>
 
 typedef struct node {
-    int val;
-    struct node *next;
+  int val;
+  struct node *next;
 } node_t;
 
 void enqueue(node_t **head, int val);
