@@ -1,5 +1,5 @@
 <div align="center">
-<img style="border-radius: 10px" width="863" src="https://github.com/user-attachments/assets/90330074-71fb-4517-812c-92571b57495b">
+<img style="border-radius: 10px" width="863" src="https://github.com/user-attachments/assets/c20b0ba8-2643-4377-a46e-c6a06e981f13">
 </div>
 
 # Multithreaded Fractal Renderer
